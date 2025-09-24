@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, Reorder } from "framer-motion";
+import toast from "react-hot-toast";
 import {
   Card,
   CardContent,
@@ -23,6 +24,12 @@ import {
   Calendar,
   Briefcase,
   Plus,
+  Star,
+  Archive,
+  CheckCircle2,
+  Dot,
+  MoreHorizontal,
+  GripVertical,
 } from "lucide-react";
 import Layout from "@/components/layout";
 import CreateJobModal from "@/components/JobModal";
@@ -35,17 +42,17 @@ type Job = {
   status: "Active" | "Archived";
   location: string;
   type: string;
-  date?: string; // Changed to optional to handle missing data
+  date?: string;
   skills?: string[];
+  requirements?: string[];
   companyIcon?: React.ReactNode;
 };
 
-// --- Skeleton Component for Loading State ---
 const JobCardSkeleton = () => (
-  <div className="bg-white p-6 rounded-xl border border-slate-200 animate-pulse">
+  <div className="bg-white p-6 rounded-xl border border-slate-200 animate-pulse space-y-4">
     <div className="flex items-start justify-between">
       <div className="flex items-center gap-4">
-        <div className="h-12 w-12 rounded-lg bg-slate-200"></div>
+        <div className="h-12 w-10 rounded-xl bg-slate-200"></div>
         <div>
           <div className="h-5 w-40 bg-slate-200 rounded"></div>
           <div className="h-4 w-48 bg-slate-200 rounded mt-2"></div>
@@ -53,18 +60,18 @@ const JobCardSkeleton = () => (
       </div>
       <div className="h-6 w-20 bg-slate-200 rounded-full"></div>
     </div>
-    <div className="mt-4 space-y-3">
-      <div className="h-4 w-full bg-slate-200 rounded"></div>
-      <div className="h-4 w-3/4 bg-slate-200 rounded"></div>
+    <div className="flex items-center gap-4">
+      <div className="h-6 w-24 bg-slate-200 rounded-full"></div>
+      <div className="h-6 w-24 bg-slate-200 rounded-full"></div>
+      <div className="h-6 w-24 bg-slate-200 rounded-full"></div>
     </div>
-    <div className="flex items-center gap-4 mt-4">
-      <div className="h-6 w-24 bg-slate-200 rounded-full"></div>
-      <div className="h-6 w-24 bg-slate-200 rounded-full"></div>
+    <div className="space-y-3 pt-2">
+      <div className="h-16 bg-slate-100 rounded-lg"></div>
+      <div className="h-16 bg-slate-100 rounded-lg"></div>
     </div>
   </div>
 );
 
-// --- Main Jobs Page Component ---
 export default function JobsPage() {
   const navigate = useNavigate();
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -78,29 +85,30 @@ export default function JobsPage() {
   const [open, setOpen] = useState(false);
 
   const allTags = [
-    "React", "Angular", "Vue.js", "Python", "Node.js", "Docker", "AWS", 
+    "React", "Angular", "Vue.js", "Python", "Node.js", "Docker", "AWS",
     "TypeScript", "JavaScript", "REST API", "GraphQL", "Kubernetes"
   ];
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  
+
+  // --- Fetch jobs ---
   useEffect(() => {
     async function fetchJobs() {
       setLoading(true);
       try {
         await new Promise(resolve => setTimeout(resolve, 800));
         const res = await fetch(
-          `/jobs?page=${page}&pageSize=${pageSize}&status=${
-            status !== "All" ? status : ""
-          }&search=${search}`
+          `/jobs?page=${page}&pageSize=${pageSize}&search=${search}`
         );
         const result = await res.json();
-        
-        const jobsWithIcons = result.data.map((job: Job) => ({
-            ...job,
-            companyIcon: <Briefcase className="h-6 w-6 text-indigo-500" />
-        }))
 
-        setJobs(jobsWithIcons || []);
+        const processedData = result.data.map((job: Job, index: number) => ({
+          ...job,
+          status: index % 2 === 0 ? 'Active' : 'Archived',
+          skills: job.skills && job.skills.length > 0 ? job.skills : ['Node.js', 'React', 'TypeScript', 'AWS', 'Docker'],
+          companyIcon: <Briefcase className="h-5 w-5 text-indigo-500" />
+        }));
+
+        setJobs(processedData || []);
         setTotal(result.total || 0);
       } catch (err) {
         console.error("Failed to fetch jobs", err);
@@ -109,7 +117,7 @@ export default function JobsPage() {
       }
     }
     fetchJobs();
-  }, [page, pageSize, status, search]);
+  }, [page, pageSize, search]);
 
   const toggleTag = (tag: string) => {
     setSelectedTags((prev) =>
@@ -117,11 +125,39 @@ export default function JobsPage() {
     );
   };
 
-  const filteredJobs = jobs.filter(
-    (job) =>
-      selectedTags.length === 0 ||
-      selectedTags.every((tag) => job.skills?.includes(tag))
-  );
+  // Filter directly on jobs, not filteredJobs
+  const filteredJobs = jobs.filter(job => {
+    const statusMatch = status === 'All' || job.status === status;
+    const tagMatch = selectedTags.length === 0 || selectedTags.every(tag => job.skills?.includes(tag));
+    return statusMatch && tagMatch;
+  });
+
+  // Use dragList as the source of truth for order
+  const [dragList, setDragList] = useState<Job[]>([]);
+  // Only set dragList when jobs or filters change, not on every render
+  useEffect(() => {
+    setDragList(filteredJobs);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobs, status, selectedTags, search, page, pageSize]);
+
+  const handleReorder = async (newOrder: Job[]) => {
+    const prevOrder = [...dragList];
+    setDragList(newOrder);
+    setJobs(newOrder); // <-- update the main jobs array as well!
+
+    try {
+      // Simulate API call to persist order with 10% chance of failure
+      await new Promise(resolve => setTimeout(resolve, 500));
+      if (Math.random() < 0.1) {
+        throw new Error("API Error: Failed to update job order");
+      }
+      toast.success("Job order updated!");
+    } catch (err) {
+      setDragList(prevOrder);
+      setJobs(prevOrder); // rollback
+      toast.error("Failed to update job order. Reverting.");
+    }
+  };
 
   const totalPages = Math.ceil(total / pageSize);
 
@@ -132,8 +168,90 @@ export default function JobsPage() {
 
   const itemVariants = {
     hidden: { y: 20, opacity: 0 },
-    show: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 100 } },
+    show: { y: 0, opacity: 1, transition: { type: "spring" as const, stiffness: 100 } },
   };
+
+  // Job Card Component for Grid View
+  const JobCard = ({ job }: { job: Job }) => (
+    <Card className="bg-white border border-slate-200 text-slate-800 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer rounded-xl flex flex-col h-full group relative">
+      {/* Drag Handle - only visible on hover */}
+      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
+        <div className="bg-slate-100 hover:bg-slate-200 rounded p-1 cursor-grab active:cursor-grabbing">
+          <GripVertical className="h-4 w-4 text-slate-400" />
+        </div>
+      </div>
+      
+      <div onClick={() => navigate(`/jobs/${job.id}`)}>
+        <CardHeader className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-10 rounded-xl bg-slate-100 flex items-center justify-center">
+                {job.companyIcon}
+              </div>
+              <CardTitle className="text-lg font-bold text-slate-900">{job.title}</CardTitle>
+            </div>
+            <div className="flex items-center gap-1">
+              {job.status === 'Active' ? (
+                <Badge className="bg-green-100 text-green-700 hover:bg-green-100/80 border border-green-200/80 gap-1.5">
+                  <CheckCircle2 size={14} /> Active
+                </Badge>
+              ) : (
+                <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100/80 border border-amber-200/80 gap-1.5">
+                  <Archive size={14} /> Archived
+                </Badge>
+              )}
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => {e.stopPropagation();}}>
+                <MoreHorizontal size={16} />
+              </Button>
+            </div>
+          </div>
+          <p className="text-sm text-slate-500 pt-1">{job.description}</p>
+        </CardHeader>
+        <CardContent className="space-y-4 pt-0 flex flex-col flex-grow">
+          <div className="flex items-center flex-wrap text-sm text-slate-500 gap-x-4 gap-y-2">
+            <div className="flex items-center gap-2">
+              <MapPin size={16} /> <span>{job.location || 'Remote'}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Briefcase size={16} /> <span className="capitalize">{job.type}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Calendar size={16} />
+              <span>{job.date ? format(parseISO(job.date), 'MMM d, yyyy') : 'N/A'}</span>
+            </div>
+          </div>
+          <div className="space-y-3 pt-4 border-t border-slate-100 flex flex-col flex-grow">
+            {(job.requirements && job.requirements.length > 0) && (
+              <div className="bg-slate-50 border border-slate-200/80 rounded-lg p-3">
+                <h4 className="font-semibold text-xs text-slate-600 mb-2 flex items-center gap-2"><Star size={14}/> Key Requirements</h4>
+                <ul className="list-disc list-inside space-y-1">
+                  {job.requirements.slice(0, 2).map((req, i) => (
+                    <li key={i} className="text-xs text-slate-500">{req}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {(job.skills && job.skills.length > 0) && (
+              <div className="bg-slate-50 border border-slate-200/80 rounded-lg p-3 mt-auto">
+                <h4 className="font-semibold text-xs text-slate-600 mb-2 flex items-center gap-1"><Dot/> Skills & Technologies</h4>
+                <div className="flex flex-wrap gap-2">
+                  {job.skills.slice(0, 4).map((skill, i) => (
+                    <Badge key={i} variant="secondary" className="flex items-center gap-1.5 font-normal">
+                      <span className="h-1.5 w-1.5 rounded-full bg-slate-400"></span>
+                      {skill}
+                    </Badge>
+                  ))}
+                  {job.skills.length > 4 && (
+                    <Badge variant="secondary" className="font-normal">+{job.skills.length - 4} more</Badge>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </div>
+    </Card>
+  );
 
   return (
     <Layout>
@@ -179,62 +297,72 @@ export default function JobsPage() {
           </div>
         </div>
 
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="show"
-          className={
-            view === "grid"
-              ? "grid md:grid-cols-2 lg:grid-cols-3 gap-6"
-              : "space-y-4"
-          }
-        >
-          {loading
-            ? Array.from({ length: pageSize }).map((_, index) => <JobCardSkeleton key={index} />)
-            : filteredJobs.map((job) => (
-                <motion.div key={job.id} variants={itemVariants}>
-                  <Card
-                    onClick={() => navigate(`/jobs/${job.id}`)}
-                    className="bg-white border border-slate-200 text-slate-800 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer rounded-xl overflow-hidden"
-                  >
-                    <CardHeader className="flex flex-row items-start justify-between">
-                        <div className="flex items-center gap-4">
-                            <div className="h-12 w-12 rounded-lg bg-slate-100 flex items-center justify-center">
-                                {job.companyIcon}
-                            </div>
-                            <div>
-                                <CardTitle className="text-lg font-bold text-slate-900">{job.title}</CardTitle>
-                                <p className="text-sm text-slate-500">{job.description}</p>
-                            </div>
-                        </div>
-                        <Badge variant={job.status === "Active" ? "default" : "secondary"}>{job.status}</Badge>
-                    </CardHeader>
-                    <CardContent className="space-y-4 pt-0">
-                      <div className="flex items-center text-sm text-slate-500 gap-6">
-                          <div className="flex items-center gap-2">
-                              <MapPin size={16} />
-                              <span>{job.location || 'Remote'}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                              <Calendar size={16} />
-                              {/* ## FIX: Added a check for job.date to prevent crash ## */}
-                              <span>{job.date ? format(parseISO(job.date), 'MMM d, yyyy') : 'N/A'}</span>
-                          </div>
+        {/* --- Drag-and-drop for LIST view --- */}
+        {view === "list" ? (
+          <Reorder.Group
+            axis="y"
+            values={dragList}
+            onReorder={handleReorder}
+            className="space-y-4"
+          >
+            {loading
+              ? Array.from({ length: pageSize }).map((_, index) => <JobCardSkeleton key={index} />)
+              : dragList.map((job) => (
+                  <Reorder.Item key={job.id} value={job} className="bg-white border border-slate-200 rounded-xl shadow-sm">
+                    <div className="flex items-center gap-3 p-4">
+                      <GripVertical className="text-slate-400 cursor-grab active:cursor-grabbing" />
+                      <div className="h-12 w-10 rounded-full bg-slate-100 flex items-center justify-center">
+                        {job.companyIcon}
                       </div>
-                      <div className="flex items-center flex-wrap gap-2 border-t border-slate-200 pt-4">
-                        <Badge variant="outline" className="capitalize">{job.type}</Badge>
-                        {(job.skills || []).slice(0, 3).map((skill, i) => (
-                            <Badge key={i} variant="secondary">{skill}</Badge>
-                        ))}
-                        {(job.skills?.length || 0) > 3 && (
-                            <Badge variant="secondary">+{ (job.skills?.length || 0) - 3} more</Badge>
+                      <div className="flex-grow">
+                        <CardTitle className="text-lg font-bold text-slate-900">{job.title}</CardTitle>
+                        <p className="text-sm text-slate-500">{job.description}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {job.status === 'Active' ? (
+                          <Badge className="bg-green-100 text-green-700 hover:bg-green-100/80 border border-green-200/80 gap-1.5">
+                            <CheckCircle2 size={14} /> Active
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100/80 border border-amber-200/80 gap-1.5">
+                            <Archive size={14} /> Archived
+                          </Badge>
                         )}
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(`/jobs/${job.id}`)}>
+                          <MoreHorizontal size={16} />
+                        </Button>
                       </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
-        </motion.div>
+                    </div>
+                  </Reorder.Item>
+                ))}
+          </Reorder.Group>
+        ) : (
+          /* --- Drag-and-drop for GRID view --- */
+          <Reorder.Group
+            axis="y"
+            values={dragList}
+            onReorder={handleReorder}
+            className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
+          >
+            {loading
+              ? Array.from({ length: pageSize }).map((_, index) => <JobCardSkeleton key={index} />)
+              : dragList.map((job) => (
+                  <Reorder.Item 
+                    key={job.id} 
+                    value={job}
+                    className="h-full"
+                    // Add layout animation for smooth transitions
+                    layout
+                    initial={false}
+                    animate={{ scale: 1 }}
+                    whileDrag={{ scale: 1.05, rotate: 2, zIndex: 999 }}
+                    dragElastic={0.1}
+                  >
+                    <JobCard job={job} />
+                  </Reorder.Item>
+                ))}
+          </Reorder.Group>
+        )}
 
         {!loading && (
           <div className="flex items-center justify-between mt-6">
