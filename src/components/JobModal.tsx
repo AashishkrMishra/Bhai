@@ -110,11 +110,9 @@ export default function JobModal({
     if (!form.status.trim()) newErrors.status = "Status is required.";
     if (!form.description.trim())
       newErrors.description = "Job description is required.";
-    if (
-      form.requirements.length === 0 ||
-      form.requirements.every((r) => !r.trim())
-    ) {
-      newErrors.requirements = "At least one requirement is required.";
+
+    if (!form.tags || form.tags.length === 0) {
+      newErrors.tags = "At least one tag is required.";
     }
 
     setErrors(newErrors);
@@ -128,23 +126,32 @@ export default function JobModal({
       setLoading(true);
 
       if (form.id) {
-        // ✅ Update existing job
+        // ✅ Update existing job (still use db for PATCH, or you can add PATCH API call here if needed)
         await db.jobs.update(form.id, {
           ...form,
-          status: form.status.toLowerCase() as JobStatus, // 👈 normalize
-          type: form.type.toLowerCase() as JobType, // 👈 normalize
+          status: form.status.toLowerCase() as JobStatus,
+          type: form.type.toLowerCase() as JobType,
           slug: form.title.toLowerCase().replace(/\s+/g, "-"),
         });
-        
       } else {
-        // ✅ Create new job
-        await db.jobs.add({
+        // ✅ Create new job via mock API
+        const jobPayload = {
           ...form,
-          status: form.status.toLowerCase() as JobStatus, // 👈 normalize
-          type: form.type.toLowerCase() as JobType, // 👈 normalize
-          slug: form.title.toLowerCase().replace(/\s+/g, "-"),
-          order: Date.now(), // fallback ordering
+          status: form.status.toLowerCase(),
+          type: form.type.toLowerCase(),
+          order: Date.now(),
+          skills: [], // <-- add this line to satisfy Job interface
+        };
+        const res = await fetch("/jobs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(jobPayload),
         });
+        if (!res.ok) {
+          throw new Error("Failed to create job");
+        }
+        // Optionally, you can use the returned job data
+        // const createdJob = await res.json();
       }
 
       if (onSaved) onSaved?.();
@@ -158,60 +165,77 @@ export default function JobModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl bg-[#0f172a] text-white">
+    <>
+      {/* Custom style for hiding scrollbar and fixing z-index */}
+      <style>{`
+        .scrollbar-hide {
+          scrollbar-width: none; /* Firefox */
+          -ms-overflow-style: none; /* IE 10+ */
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none; /* Chrome, Safari, Opera */
+        }
+        .job-modal-z {
+          z-index: 50 !important;
+        }
+      `}</style>
+      <Dialog open={open} onOpenChange={onClose}>
+        <DialogContent className="max-w-2xl bg-white text-slate-900 border border-slate-200 job-modal-z">
         <DialogHeader>
-          <DialogTitle className="text-xl">
+          <DialogTitle className="text-xl text-slate-900">
             {form.id ? "Edit Job" : "Create New Job"}
           </DialogTitle>
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-slate-500">
             {form.id
               ? "Update job details below."
               : "Fill in the details to create a new job posting."}
           </p>
         </DialogHeader>
 
-        <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+  <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2 scrollbar-hide">
           {/* Job Title */}
-          <div>
-            <label className="text-sm">Job Title *</label>
+          <div className="ml-4">
+            <label className="text-sm text-slate-700 ml-1">Job Title *</label>
             <Input
+              required
               placeholder="e.g. Senior Software Engineer"
               value={form.title}
               onChange={(e) => handleChange("title", e.target.value)}
-              className={`bg-gray-900 border-gray-700 mt-1 ${
+              className={`bg-white border-slate-300 mt-1 text-slate-900 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-600 focus:border-green-600 ${
                 errors.title ? "border-red-500" : ""
               }`}
             />
             {errors.title && (
-              <p className="text-red-400 text-xs mt-1">{errors.title}</p>
+              <p className="text-red-500 text-xs mt-1">{errors.title}</p>
             )}
           </div>
 
           {/* Location + Type */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm">Location *</label>
-              <Input
-                placeholder="e.g. San Francisco, CA"
-                value={form.location}
-                onChange={(e) => handleChange("location", e.target.value)}
-                className={`bg-gray-900 border-gray-700 mt-1 ${
-                  errors.location ? "border-red-500" : ""
-                }`}
+            <div className="grid grid-cols-2 gap-4 ml-4">
+              <div>
+                <label className="text-sm text-slate-700 ml-1">Location *</label>
+                <Input
+                  required
+                  placeholder="e.g. San Francisco, CA"
+                  value={form.location}
+                  onChange={(e) => handleChange("location", e.target.value)}
+                  className={`bg-white border-slate-300 mt-1 text-slate-900 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-600 focus:border-green-600 ${
+                    errors.location ? "border-red-500" : ""
+                  }`}
               />
               {errors.location && (
-                <p className="text-red-400 text-xs mt-1">{errors.location}</p>
+                <p className="text-red-500 text-xs mt-1">{errors.location}</p>
               )}
             </div>
             <div>
-              <label className="text-sm">Job Type *</label>
+              <label className="text-sm text-slate-700 ml-1">Job Type *</label>
               <Select
+                required
                 value={form.type}
                 onValueChange={(val) => handleChange("type", val)}
               >
                 <SelectTrigger
-                  className={`bg-gray-900 border-gray-700 mt-1 ${
+                  className={`bg-white border-slate-300 mt-1 text-slate-900 ${
                     errors.type ? "border-red-500" : ""
                   }`}
                 >
@@ -225,20 +249,21 @@ export default function JobModal({
                 </SelectContent>
               </Select>
               {errors.type && (
-                <p className="text-red-400 text-xs mt-1">{errors.type}</p>
+                <p className="text-red-500 text-xs mt-1">{errors.type}</p>
               )}
             </div>
           </div>
 
           {/* Status */}
-          <div>
-            <label className="text-sm">Status *</label>
+          <div className="ml-4">
+            <label className="text-sm text-slate-700 ml-1">Status *</label>
             <Select
+              required
               value={form.status}
               onValueChange={(val) => handleChange("status", val)}
             >
               <SelectTrigger
-                className={`bg-gray-900 border-gray-700 mt-1 ${
+                className={`bg-white border-slate-300 mt-1 text-slate-900 ${
                   errors.status ? "border-red-500" : ""
                 }`}
               >
@@ -250,49 +275,51 @@ export default function JobModal({
               </SelectContent>
             </Select>
             {errors.status && (
-              <p className="text-red-400 text-xs mt-1">{errors.status}</p>
+              <p className="text-red-500 text-xs mt-1">{errors.status}</p>
             )}
           </div>
 
           {/* Job Description */}
-          <div>
-            <label className="text-sm">Job Description *</label>
+          <div className="ml-4">
+            <label className="text-sm text-slate-700 ml-1">Job Description *</label>
             <Textarea
+              required
               placeholder="Describe the role, responsibilities..."
               value={form.description}
               onChange={(e) => handleChange("description", e.target.value)}
-              className={`bg-gray-900 border-gray-700 mt-1 ${
+              className={`bg-white border-slate-300 mt-1 text-slate-900 ${
                 errors.description ? "border-red-500" : ""
               }`}
             />
             {errors.description && (
-              <p className="text-red-400 text-xs mt-1">{errors.description}</p>
+              <p className="text-red-500 text-xs mt-1">{errors.description}</p>
             )}
           </div>
 
           {/* Requirements */}
-          <div>
-            <label className="text-sm">Requirements *</label>
+          <div className="ml-4">
+            <label className="text-sm text-slate-700 ml-1">Requirements *</label>
             <div className="space-y-2">
               {form.requirements.map((req, idx) => (
                 <Input
+                  required
                   key={idx}
                   placeholder={`Requirement ${idx + 1}`}
                   value={req}
                   onChange={(e) => handleRequirementChange(idx, e.target.value)}
-                  className={`bg-gray-900 border-gray-700 ${
+                  className={`bg-white border-slate-300 text-slate-900 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-600 focus:border-green-600 ${
                     errors.requirements ? "border-red-500" : ""
                   }`}
                 />
               ))}
             </div>
             {errors.requirements && (
-              <p className="text-red-400 text-xs mt-1">{errors.requirements}</p>
+              <p className="text-red-500 text-xs mt-1">{errors.requirements}</p>
             )}
             <Button
               type="button"
               variant="secondary"
-              className="mt-2 bg-black border border-gray-700"
+              className="mt-2 bg-slate-100 border border-slate-300 text-slate-900"
               onClick={addRequirement}
             >
               + Add Requirement
@@ -300,24 +327,24 @@ export default function JobModal({
           </div>
 
           {/* Tags */}
-          <div>
-            <label className="text-sm">Tags</label>
+          <div className="ml-4">
+            <label className="text-sm text-slate-700 ml-1">Tags *</label>
             <Input
               placeholder="Type a tag and press Enter"
               value={tagInput}
               onChange={(e) => setTagInput(e.target.value)}
               onKeyDown={addTag}
-              className="bg-gray-900 border-gray-700 mt-1"
+              className="bg-white border-slate-300 mt-1 text-slate-900 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-600 focus:border-green-600"
             />
             <div className="flex gap-2 flex-wrap mt-2">
               {form.tags.map((tag, idx) => (
                 <span
                   key={idx}
-                  className="px-3 py-1 bg-gray-800 rounded-full text-sm flex items-center gap-2"
+                  className="px-3 py-1 bg-slate-100 rounded-full text-sm flex items-center gap-2 text-slate-900 border border-slate-300"
                 >
                   {tag}
                   <button
-                    className="text-red-400 text-xs"
+                    className="text-red-500 text-xs"
                     onClick={() => removeTag(tag)}
                   >
                     ✕
@@ -325,19 +352,23 @@ export default function JobModal({
                 </span>
               ))}
             </div>
+            {errors.tags && (
+              <p className="text-red-500 text-xs mt-1">{errors.tags}</p>
+            )}
           </div>
         </div>
 
         {/* Footer */}
         <DialogFooter className="flex justify-end gap-2 mt-4">
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} className="border-slate-300 text-slate-900">
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={loading}>
+          <Button onClick={handleSubmit} disabled={loading} className="bg-indigo-600 hover:bg-indigo-700 text-white">
             {loading ? "Saving..." : form.id ? "Update Job" : "Create Job"}
           </Button>
         </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

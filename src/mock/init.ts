@@ -1,10 +1,11 @@
 // mock/init.ts
 import { setupWorker } from "msw/browser";
 import { handlers } from "./handlers";
-import { seed } from "./db";
+import { seed, db } from "./db";
 
 export async function startMocks() {
-  await seed(); // seed local DB
+  await seed(); 
+  // await db.delete();
   const worker = setupWorker(...handlers);
   return worker.start({ onUnhandledRequest: "bypass" });
 }

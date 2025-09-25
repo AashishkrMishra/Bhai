@@ -91,7 +91,7 @@ function slugify(str: string) {
   return str.toLowerCase().replace(/\s+/g, "-");
 }
 
-const FIRST_NAMES = ["John", "Alice", "David", "Sophia", "Michael", "Emma", "Daniel", "Olivia", "James", "Ava"];
+const FIRST_NAMES = ["Ashish", "Shikhar", "Ayush", "Sophia", "Michael", "Emma", "Daniel", "Olivia", "James", "Ava"];
 const LAST_NAMES = ["Smith", "Johnson", "Brown", "Taylor", "Anderson", "Clark", "Lewis", "Walker", "Young", "King"];
 
 function generateName(i: number) {
@@ -199,5 +199,60 @@ export async function seed() {
       stage: stages[Math.floor(Math.random() * stages.length)],
     };
   });
-  await db.candidates.bulkAdd(candidates, { allKeys: true });
+  const candidateIds = await db.candidates.bulkAdd(candidates, { allKeys: true });
+
+  for (const id of candidateIds) {
+    const notes: Note[] = [
+      {
+        candidateId: id as number,
+        author: "Sarah Johnson",
+        content:
+          "Initial phone screening completed. Candidate shows strong technical background and good communication skills. @John Smith please review for next steps.",
+        createdAt: daysAgo(35),
+      },
+      {
+        candidateId: id as number,
+        author: "Mike Chen",
+        content:
+          "Technical assessment results look promising. Scored well on algorithms and system design. Ready for technical interview round.",
+        createdAt: daysAgo(33),
+      },
+    ];
+    await db.notes.bulkAdd(notes);
+
+    const timeline: TimelineEvent[] = [
+      {
+        candidateId: id as number,
+        type: "system",
+        description: "Application received",
+        createdAt: daysAgo(36),
+      },
+      {
+        candidateId: id as number,
+        type: "note",
+        description: "Added initial screening notes",
+        author: "Sarah Johnson",
+        createdAt: daysAgo(35),
+      },
+      {
+        candidateId: id as number,
+        type: "stage-change",
+        description: "Stage changed from applied to screen",
+        fromStage: "applied",
+        toStage: "screen",
+        author: "HR Team",
+        createdAt: daysAgo(35),
+      },
+      {
+        candidateId: id as number,
+        type: "stage-change",
+        description: "Stage changed from screen to tech",
+        fromStage: "screen",
+        toStage: "tech",
+        author: "HR Team",
+        createdAt: daysAgo(33),
+      },
+    ];
+    await db.timeline.bulkAdd(timeline);
+ }
 }

@@ -1,29 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { db, TimelineEvent } from "@/mock/db";
+import { TimelineEvent } from "@/mock/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 interface CandidateTimelineProps {
   candidateId: number;
+  timeline: TimelineEvent[];
 }
 
-export default function CandidateTimeline({ candidateId }: CandidateTimelineProps) {
-  const [events, setEvents] = useState<TimelineEvent[]>([]);
-
-  useEffect(() => {
-    loadTimeline();
-  }, [candidateId]);
-
-  async function loadTimeline() {
-    const e = await db.timeline
-      .where("candidateId")
-      .equals(candidateId)
-      .sortBy("createdAt");
-    setEvents(e);
-  }
-
+export default function CandidateTimeline({ candidateId, timeline }: CandidateTimelineProps) {
   function eventIcon(type: TimelineEvent["type"]) {
     switch (type) {
       case "system":
@@ -43,11 +29,11 @@ export default function CandidateTimeline({ candidateId }: CandidateTimelineProp
         <CardTitle>Timeline</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {events.length === 0 && (
+        {(!timeline || timeline.length === 0) && (
           <p className="text-sm text-gray-500">No timeline events yet.</p>
         )}
         <div className="relative border-l pl-4 space-y-4">
-          {events.map((ev) => (
+          {timeline.map((ev) => (
             <div key={ev.id} className="relative">
               <div className="absolute -left-6">{eventIcon(ev.type)}</div>
               <div className="p-3 border rounded-lg bg-white shadow-sm">

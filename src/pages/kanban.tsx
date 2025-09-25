@@ -1,136 +1,82 @@
-import { Users, Search } from "lucide-react";
-import { StageColumn } from "@/components/Stage";
-import { useCandidates } from "@/hooks/useCandidates";
-import { CandidateStage } from "@/mock/db";
-import { Input } from "@/components/ui/input";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Card } from "@/components/ui/card";
-import { useState } from "react";
+// src/components/Kanban.tsx
 
-export default function CandidatesKanban() {
-  const { candidates, loading, updateStage } = useCandidates();
-  const [dragged, setDragged] = useState<any>(null);
-  const [search, setSearch] = useState("");
-  const [job, setJob] = useState("All Jobs");
-  const [stageFilter, setStageFilter] = useState("All");
+import { useState } from "react";
+import { motion } from "framer-motion";
+import CandidateCard from "@/components/CandidateCard";
+import { useCandidates } from "@/hooks/useCandidates";
+import { Candidate, CandidateStage } from "@/mock/db";
+import { Plus } from "lucide-react";
+
+// This component receives the filtered candidates as a prop
+export default function Kanban({ candidates }: { candidates: Candidate[] }) {
+  const { loading, updateStage } = useCandidates();
+  const [dragged, setDragged] = useState<Candidate | null>(null);
 
   const handleDrop = (e: React.DragEvent, stage: CandidateStage) => {
     e.preventDefault();
     if (dragged && dragged.stage !== stage) {
-      updateStage(dragged.id, stage);
+      updateStage(dragged.id!, stage);
     }
     setDragged(null);
   };
 
-  const handleDragStart = (e: React.DragEvent, candidate: any) => {
+  const handleDragStart = (e: React.DragEvent, candidate: Candidate) => {
     setDragged(candidate);
-    e.dataTransfer.effectAllowed = "move";
   };
 
   const handleDragOver = (e: React.DragEvent) => e.preventDefault();
 
-  const filtered = candidates.filter((c) => {
-    const matchSearch =
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.email.toLowerCase().includes(search.toLowerCase());
-    const matchJob = job === "All Jobs" || c.jobTitle === job;
-    const matchStage = stageFilter === "All" || c.stage === stageFilter;
-    return matchSearch && matchJob && matchStage;
-  });
+  const stages: { stage: CandidateStage; color: string; name: string }[] = [
+    { stage: "applied", color: "bg-orange-400", name: "Working on it" },
+    { stage: "screen", color: "bg-purple-400", name: "Needs review" },
+    { stage: "tech", color: "bg-pink-400", name: "In progress" },
+    { stage: "offer", color: "bg-sky-400", name: "Interview" },
+    { stage: "hired", color: "bg-green-400", name: "Done" },
+    { stage: "rejected", color: "bg-red-400", name: "Stuck" },
+  ];
 
-  const stages: { stage: CandidateStage; color: string }[] = [
-  { stage: "applied", color: "bg-blue-500" },
-  { stage: "screen", color: "bg-orange-500" },
-  { stage: "tech", color: "bg-purple-500" },
-  { stage: "offer", color: "bg-teal-500" },
-  { stage: "hired", color: "bg-green-500" },
-  { stage: "rejected", color: "bg-red-500" },
-];
-
-const candidateStages: CandidateStage[] = [
-  "applied",
-  "screen",
-  "tech",
-  "offer",
-  "hired",
-  "rejected",
-];
-  const jobs = [...new Set(candidates.map((c) => c.jobTitle))];
+  const containerVariants = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } }, };
+  const itemVariants = { hidden: { y: 20, opacity: 0 }, show: { y: 0, opacity: 1 }, };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-white">
-        Loading candidates...
-      </div>
-    );
+    return <div className="flex justify-center items-center h-96 text-slate-500">Updating...</div>;
   }
-
+  
   return (
-    <div className="min-h-screen bg-slate-900 text-white p-6">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <div className="bg-blue-600 p-2 rounded-lg">
-          <Users className="w-6 h-6" />
-        </div>
-        <h1 className="text-2xl font-bold">Candidates</h1>
-      </div>
-
-      {/* Filters */}
-      <div className="flex gap-4 mb-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-          <Input
-            placeholder="Search candidates..."
-            className="pl-10"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-
-        <Select value={stageFilter} onValueChange={setStageFilter}>
-          <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder="Stage" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="All">Stage: All</SelectItem>
-            {Object.values(candidateStages).map((s) => (
-              <SelectItem key={s} value={s}>
-                Stage: {s}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select value={job} onValueChange={setJob}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Job" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="All Jobs">Job: All</SelectItem>
-            {jobs.map((j) => (
-              <SelectItem key={j} value={j}>
-                Job: {j}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Kanban */}
-      <div className="flex gap-6 overflow-x-auto pb-6">
-        {stages.map(({ stage, color }) => (
-          <StageColumn
-            key={stage}
-            stage={stage}
-            candidates={filtered.filter((c) => c.stage === stage)}
-            count={filtered.filter((c) => c.stage === stage).length}
-            color={color}
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            onDragStart={handleDragStart}
-          />
-        ))}
-      </div>
-    </div>
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="show"
+      className="flex gap-6 overflow-x-auto py-4"
+    >
+      {stages.map(({ stage, color, name }) => {
+        const candidatesInStage = candidates.filter((c) => c.stage === stage);
+        return (
+          <motion.div key={stage} variants={itemVariants}>
+            <div className="w-72 bg-slate-100 rounded-lg shadow-sm border border-slate-200 flex-shrink-0">
+              {/* Column Header */}
+              <div className={`p-3 rounded-t-lg ${color}`}>
+                <h2 className="font-semibold text-white text-sm">
+                  {name} / {candidatesInStage.length}
+                </h2>
+              </div>
+              {/* Droppable Area */}
+              <div
+                className="p-3 h-full"
+                onDrop={(e) => handleDrop(e, stage)}
+                onDragOver={handleDragOver}
+              >
+                {candidatesInStage.map((c) => (
+                  <CandidateCard key={c.id} candidate={c} onDragStart={handleDragStart} />
+                ))}
+                 <button className="flex w-full items-center gap-2 p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-200 rounded-md transition-colors">
+                    <Plus size={16}/> Add
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        );
+      })}
+    </motion.div>
   );
 }
