@@ -1,5 +1,4 @@
 // src/components/Sidebar.tsx
-
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -100,7 +99,7 @@ export default function Sidebar() {
         onClick={() => navigate("/")}
       >
         <div className="flex items-center gap-3 overflow-hidden">
-          <div className="bg-indigo-600 p-2 rounded-lg">
+          <div className="p-2 rounded-lg" style={{ background: 'linear-gradient(135deg, #14b8a6 0%, #0d9488 100%)' }}>
             <Home className="h-6 w-6 text-white" />
           </div>
           {!isCollapsed && (
@@ -116,7 +115,7 @@ export default function Sidebar() {
         </div>
       </div>
       
-      <hr className="mx-4 border-slate-200" />
+  {/* Removed top border/line */}
       
       <nav className="flex-1 px-4 py-2 space-y-2 overflow-hidden">
         {navItems.map((item) => (
@@ -124,14 +123,19 @@ export default function Sidebar() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  variant={
-                    location.pathname.startsWith(item.path)
-                      ? "default"
-                      : "ghost"
-                  }
+                  variant="ghost"
                   className={`w-full flex items-center gap-3 ${
                     isCollapsed ? "justify-center" : "justify-start"
-                  }`}
+                  } ${location.pathname.startsWith(item.path) ? "sidebar-selected" : ""}`}
+                  style={
+                    location.pathname.startsWith(item.path)
+                      ? {
+                          background: 'linear-gradient(90deg, #14b8a6 0%, #0d9488 100%)',
+                          color: '#fff',
+                          fontWeight: 600,
+                        }
+                      : undefined
+                  }
                   onClick={() => navigate(item.path)}
                 >
                   {item.icon}
@@ -153,7 +157,7 @@ export default function Sidebar() {
       </nav>
 
       <div className="mt-auto p-4">
-        <hr className="mb-3 border-slate-200" />
+
         {!isCollapsed && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -161,14 +165,15 @@ export default function Sidebar() {
             transition={{ delay: 0.2 }}
             className="text-center"
           >
-            <p className="text-sm font-semibold text-slate-700">TalentFlow v1.0.0</p>
-            <p className="text-xs text-slate-500">&copy; 2025 HR Solutions</p>
+            <p className="text-sm font-semibold" style={{ color: '#0d9488' }}>TalentFlow v1.0.0</p>
+            <p className="text-xs" style={{ color: '#14b8a6' }}>&copy; 2025 HR Solutions</p>
           </motion.div>
         )}
       </div>
       
       <div
-        className="absolute top-0 right-0 h-full w-1.5 cursor-col-resize bg-transparent hover:bg-indigo-200/50 transition-colors duration-200"
+        className="absolute top-0 right-0 h-full w-1.5 cursor-col-resize bg-transparent transition-colors duration-200"
+        style={{ background: 'transparent' }}
         onMouseDown={startResizing}
       />
     </motion.div>
