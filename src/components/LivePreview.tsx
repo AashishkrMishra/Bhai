@@ -66,7 +66,7 @@ export default function Preview({ assessment, builder, onBack }: PreviewProps) {
               <ArrowLeft className="h-4 w-4 mr-2" /> Back
             </Button>
           )}
-          <h1 className="text-3xl font-bold text-indigo-700">Assessment Preview</h1>
+          <h1 className="text-3xl font-bold" style={{ color: '#0d9488' }}>Assessment Preview</h1>
         </div>
       </div>
 
@@ -96,7 +96,7 @@ export default function Preview({ assessment, builder, onBack }: PreviewProps) {
       {data.sections?.map((s: any, si: number) => (
         <div key={s.id} className="mb-8">
           {/* Section Header */}
-          <div className="rounded-t-xl p-4 bg-gradient-to-r from-indigo-400 to-purple-400 text-white shadow">
+          <div className="rounded-t-xl p-4 text-white shadow" style={{ background: '#0d9488' }}>
             <h3 className="text-lg font-semibold">
               Section {si + 1}: {s.title}
             </h3>
@@ -115,7 +115,7 @@ export default function Preview({ assessment, builder, onBack }: PreviewProps) {
                 >
                   {/* Question Header */}
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-indigo-600 font-semibold">
+                    <span className="font-semibold" style={{ color: '#0d9488' }}>
                       {si + 1}.{qi + 1}
                     </span>
                     <span className="text-xs px-2 py-1 rounded bg-slate-200 text-slate-600">
@@ -240,7 +240,7 @@ function renderInput(q: any, value: any, onChange: (val: any) => void) {
           type="text"
           value={value || ""}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="Candidate’s response..."
+          placeholder="Candidate's response..."
           className="w-full px-3 py-2 rounded bg-white border border-slate-300 text-slate-700 text-sm"
         />
       );

@@ -32,74 +32,67 @@ export default function AssessmentsJob() {
 
   return (
     <Layout>
-      <div className="p-6 text-white">
-        <h1 className="text-2xl font-bold mb-2">Assessments</h1>
-        <p className="text-slate-400 mb-6">
-          Track assignments and their progress
-        </p>
+      <main className="flex-1 px-6 pb-6 pt-0 overflow-y-auto bg-slate-50">
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-3xl font-bold text-indigo-700">Assessments</h1>
+          </div>
 
-        {/* ✅ Stats */}
-        <div className="grid grid-cols-4 gap-4 mb-6">
-          <Card className="p-4 bg-slate-900 border border-slate-800 flex items-center gap-3">
-            <ListChecks className="text-blue-400" />
-            <div>
-              <p className="text-sm text-slate-400">Total Assessments</p>
-              <h2 className="text-xl font-bold">{total}</h2>
-            </div>
-          </Card>
-          <Card className="p-4 bg-slate-900 border border-slate-800 flex items-center gap-3">
-            <CheckCircle className="text-green-400" />
-            <div>
-              <p className="text-sm text-slate-400">Completed</p>
-              <h2 className="text-xl font-bold">{completed}</h2>
-            </div>
-          </Card>
-          <Card className="p-4 bg-slate-900 border border-slate-800 flex items-center gap-3">
-            <Clock className="text-yellow-400" />
-            <div>
-              <p className="text-sm text-slate-400">In Progress</p>
-              <h2 className="text-xl font-bold">{inProgress}</h2>
-            </div>
-          </Card>
-          <Card className="p-4 bg-slate-900 border border-slate-800 flex items-center gap-3">
-            <XCircle className="text-red-400" />
-            <div>
-              <p className="text-sm text-slate-400">Pending</p>
-              <h2 className="text-xl font-bold">{pending}</h2>
-            </div>
-          </Card>
-        </div>
-
-        {/* ✅ List */}
-        <div className="grid gap-4 grid-cols-1">
-          {assessments.map((a) => (
-            <Card
-              key={a.id}
-              className="p-4 bg-slate-900 border border-slate-800 cursor-pointer hover:shadow-lg"
-            >
-              <div className="flex justify-between items-center">
-                <div>
-                  <h2 className="text-lg font-semibold">{a.title}</h2>
-                  <p className="text-slate-400 text-sm">
-                    Candidate ID: {a.candidateId}
-                  </p>
-                </div>
-                <span
-                  className={`px-3 py-1 text-xs rounded-full capitalize ${
-                    a.status === "Completed"
-                      ? "bg-green-600"
-                      : a.status === "In Progress"
-                      ? "bg-yellow-600"
-                      : "bg-slate-600"
-                  }`}
-                >
-                  {a.status}
-                </span>
-              </div>
+          {/* Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <Card className="p-6 bg-white border border-slate-200 shadow-sm">
+              <h2 className="text-sm text-slate-500">Total Assessments</h2>
+              <p className="text-2xl font-bold text-slate-800">{total}</p>
             </Card>
-          ))}
+            <Card className="p-6 bg-white border border-slate-200 shadow-sm">
+              <h2 className="text-sm text-slate-500">Completed</h2>
+              <p className="text-2xl font-bold text-green-600">{completed}</p>
+            </Card>
+            <Card className="p-6 bg-white border border-slate-200 shadow-sm">
+              <h2 className="text-sm text-slate-500">In Progress</h2>
+              <p className="text-2xl font-bold text-yellow-500">{inProgress}</p>
+            </Card>
+            <Card className="p-6 bg-white border border-slate-200 shadow-sm">
+              <h2 className="text-sm text-slate-500">Pending</h2>
+              <p className="text-2xl font-bold text-red-600">{pending}</p>
+            </Card>
+          </div>
+
+          {/* List */}
+          <h2 className="text-xl font-semibold mb-4 text-slate-800">Your Assessments</h2>
+          {assessments.length === 0 ? (
+            <p className="text-slate-400">No assessments found.</p>
+          ) : (
+            <div className="space-y-4">
+              {assessments.map((a) => (
+                <Card
+                  key={a.id}
+                  className="p-6 bg-white border border-slate-200 shadow-sm hover:shadow-lg transition rounded-xl flex justify-between items-center cursor-pointer"
+                >
+                  {/* Left */}
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-800">{a.title}</h3>
+                    <p className="text-slate-500">Candidate ID: {a.candidateId}</p>
+                  </div>
+                  {/* Right */}
+                  <span
+                    className={`px-3 py-1 rounded-full text-sm font-medium ${
+                      a.status === "Completed"
+                        ? "bg-green-100 text-green-600 border border-green-200"
+                        : a.status === "In Progress"
+                        ? "bg-yellow-100 text-yellow-600 border border-yellow-200"
+                        : "bg-slate-100 text-slate-600 border border-slate-200"
+                    }`}
+                  >
+                    {a.status}
+                  </span>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
-      </div>
+      </main>
     </Layout>
   );
 }

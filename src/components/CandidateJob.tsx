@@ -72,157 +72,144 @@ export default function CandidatesJob() {
 
   return (
     <Layout>
-      <div className="p-6 text-white">
-        <div className="mb-4">
-          <Button
-            variant="ghost"
-            className="flex items-center gap-2 text-slate-300 hover:text-white"
-            onClick={() => navigate(-1)}
-          >
-            <ArrowLeft size={18} /> Back
-          </Button>
-        </div>
-        <h1 className="text-2xl font-bold mb-2">Candidates</h1>
-        <p className="text-slate-400 mb-6">
-          Manage and track your talent pipeline
-        </p>
-
-        {/* ✅ Stats */}
-        <div className="grid grid-cols-4 gap-4 mb-6">
-          <Card className="p-4 bg-slate-900 border border-slate-800 flex items-center gap-3">
-            <Users className="text-blue-400" />
-            <div>
-              <p className="text-sm text-slate-400">Total Candidates</p>
-              <h2 className="text-xl font-bold">{total}</h2>
-            </div>
-          </Card>
-          <Card className="p-4 bg-slate-900 border border-slate-800 flex items-center gap-3">
-            <CheckCircle className="text-green-400" />
-            <div>
-              <p className="text-sm text-slate-400">Hired</p>
-              <h2 className="text-xl font-bold">{hired}</h2>
-            </div>
-          </Card>
-          <Card className="p-4 bg-slate-900 border border-slate-800 flex items-center gap-3">
-            <XCircle className="text-red-400" />
-            <div>
-              <p className="text-sm text-slate-400">Rejected</p>
-              <h2 className="text-xl font-bold">{rejected}</h2>
-            </div>
-          </Card>
-          <Card className="p-4 bg-slate-900 border border-slate-800 flex items-center gap-3">
-            <Hourglass className="text-yellow-400" />
-            <div>
-              <p className="text-sm text-slate-400">In Progress</p>
-              <h2 className="text-xl font-bold">{inProgress}</h2>
-            </div>
-          </Card>
-        </div>
-
-        {/* ✅ Filters */}
-        <div className="flex items-center gap-3 bg-slate-900 p-4 rounded-xl border border-slate-800 mb-6">
-          <Input
-            placeholder="Search candidates..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="bg-slate-800 border-slate-700 text-white"
-          />
-
-          <Select onValueChange={setStage} defaultValue={stage}>
-            <SelectTrigger className="bg-slate-800 border-slate-700 w-40">
-              <SelectValue placeholder="Stage" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="All">All</SelectItem>
-              <SelectItem value="applied">Applied</SelectItem>
-              <SelectItem value="interview">Interview</SelectItem>
-              <SelectItem value="hired">Hired</SelectItem>
-              <SelectItem value="rejected">Rejected</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select onValueChange={setJob} defaultValue={job}>
-            <SelectTrigger className="bg-slate-800 border-slate-700 w-40">
-              <SelectValue placeholder="Job" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="All Jobs">All Jobs</SelectItem>
-              {[...new Set(candidates.map((c) => c.jobTitle))].map(
-                (jobTitle) => (
-                  <SelectItem key={jobTitle} value={jobTitle}>
-                    {jobTitle}
-                  </SelectItem>
-                )
-              )}
-            </SelectContent>
-          </Select>
-
-          {/* Toggle View */}
-          <div className="ml-auto flex items-center gap-2">
-            <Button
-              size="icon"
-              variant={view === "list" ? "default" : "outline"}
-              onClick={() => setView("list")}
-              className="rounded-lg"
-            >
-              <List size={18} />
-            </Button>
-            <Button
-              size="icon"
-              variant={view === "kanban" ? "default" : "outline"}
-              onClick={() => setView("kanban")}
-              className="rounded-lg"
-            >
-              <Grid size={18} />
-            </Button>
-          </div>
-        </div>
-
-        {/* ✅ Conditional Rendering */}
-        {view === "list" ? (
-          <div className="grid gap-4 grid-cols-1">
-            {filtered.map((c) => (
-              <Card
-                key={c.id}
-                onClick={() => navigate(`/candidates/${c.id}`)}
-                className="p-4 bg-slate-900 border border-slate-800 cursor-pointer hover:shadow-lg"
+      <main className="flex-1 px-6 pb-6 pt-0 overflow-y-auto bg-slate-50">
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                className="flex items-center gap-2 text-slate-500 hover:text-indigo-700"
+                onClick={() => navigate(-1)}
               >
-                <div className="flex justify-between items-start">
+                <ArrowLeft size={18} /> Back
+              </Button>
+              <h1 className="text-3xl font-bold text-indigo-700">Candidates</h1>
+            </div>
+          </div>
+
+          {/* Filter Bar */}
+          <Card className="p-4 flex flex-col md:flex-row gap-3 items-center bg-white border border-slate-200 shadow-sm">
+            <div className="relative w-full md:w-1/3">
+              <List className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Search candidates..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-10 bg-slate-50"
+              />
+            </div>
+            <Select value={stage} onValueChange={setStage}>
+              <SelectTrigger className="w-full md:w-40 bg-slate-50">
+                <SelectValue placeholder="Stage" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All">All Stages</SelectItem>
+                <SelectItem value="applied">Applied</SelectItem>
+                <SelectItem value="interview">Interview</SelectItem>
+                <SelectItem value="hired">Hired</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={job} onValueChange={setJob}>
+              <SelectTrigger className="w-full md:w-40 bg-slate-50">
+                <SelectValue placeholder="Job" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All Jobs">All Jobs</SelectItem>
+                {[...new Set(candidates.map((c) => c.jobTitle))].map(
+                  (jobTitle) => (
+                    <SelectItem key={jobTitle} value={jobTitle}>
+                      {jobTitle}
+                    </SelectItem>
+                  )
+                )}
+              </SelectContent>
+            </Select>
+            <div className="ml-auto flex items-center gap-2">
+              <Button
+                size="icon"
+                variant={view === "list" ? "default" : "outline"}
+                onClick={() => setView("list")}
+                className="rounded-lg"
+              >
+                <List size={18} />
+              </Button>
+              <Button
+                size="icon"
+                variant={view === "kanban" ? "default" : "outline"}
+                onClick={() => setView("kanban")}
+                className="rounded-lg"
+              >
+                <Grid size={18} />
+              </Button>
+            </div>
+          </Card>
+
+          {/* Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <Card className="p-6 bg-white border border-slate-200 shadow-sm">
+              <h2 className="text-sm text-slate-500">Total Candidates</h2>
+              <p className="text-2xl font-bold text-slate-800">{total}</p>
+            </Card>
+            <Card className="p-6 bg-white border border-slate-200 shadow-sm">
+              <h2 className="text-sm text-slate-500">Hired</h2>
+              <p className="text-2xl font-bold text-green-600">{hired}</p>
+            </Card>
+            <Card className="p-6 bg-white border border-slate-200 shadow-sm">
+              <h2 className="text-sm text-slate-500">Rejected</h2>
+              <p className="text-2xl font-bold text-red-600">{rejected}</p>
+            </Card>
+            <Card className="p-6 bg-white border border-slate-200 shadow-sm">
+              <h2 className="text-sm text-slate-500">In Progress</h2>
+              <p className="text-2xl font-bold text-yellow-500">{inProgress}</p>
+            </Card>
+          </div>
+
+          {/* List */}
+          <h2 className="text-xl font-semibold mb-4 text-slate-800">Your Candidates</h2>
+          {filtered.length === 0 ? (
+            <p className="text-slate-400">No candidates found.</p>
+          ) : (
+            <div className="space-y-4">
+              {filtered.map((c) => (
+                <Card
+                  key={c.id}
+                  onClick={() => navigate(`/candidates/${c.id}`)}
+                  className="p-6 bg-white border border-slate-200 shadow-sm hover:shadow-lg transition rounded-xl flex justify-between items-center cursor-pointer"
+                >
+                  {/* Left */}
                   <div>
-                    <h2 className="text-lg font-semibold">{c.name}</h2>
-                    <p className="text-sm text-slate-400 flex items-center gap-2">
-                      <Mail size={16} /> {c.email}
-                    </p>
-                    <p className="text-sm text-slate-400 flex items-center gap-2">
-                      <Phone size={16} /> {c.phone}
-                    </p>
-                    <p className="text-sm text-slate-400 flex items-center gap-2">
-                      <Hourglass size={16} /> {c.jobTitle}
-                    </p>
-                    <p className="text-sm text-slate-400 flex items-center gap-2">
-                      <Calendar size={16} /> Applied{" "}
-                      {new Date(c.appliedDate).toLocaleDateString()}
-                    </p>
+                    <h3 className="text-lg font-bold text-slate-800">{c.name}</h3>
+                    <p className="text-slate-500">{c.jobTitle}</p>
+                    <p className="text-slate-400 text-sm mt-1">{c.email} | {c.phone}</p>
+                    <div className="flex gap-4 mt-3 text-sm text-slate-500">
+                      <span className="flex items-center gap-1">
+                        <Calendar size={14} /> Applied {new Date(c.appliedDate).toLocaleDateString()}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Hourglass size={14} /> {c.stage}
+                      </span>
+                    </div>
                   </div>
+                  {/* Right */}
                   <span
-                    className={`px-3 py-1 text-xs rounded-full capitalize ${
+                    className={`px-3 py-1 rounded-full text-sm font-medium ${
                       c.stage === "hired"
-                        ? "bg-green-600"
+                        ? "bg-green-100 text-green-600 border border-green-200"
                         : c.stage === "rejected"
-                        ? "bg-red-600"
-                        : "bg-purple-600"
+                        ? "bg-red-100 text-red-600 border border-red-200"
+                        : "bg-purple-100 text-purple-600 border border-purple-200"
                     }`}
                   >
                     {c.stage}
                   </span>
-                </div>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <h1>hello</h1>
-        )}
-      </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      </main>
     </Layout>
   );
 }

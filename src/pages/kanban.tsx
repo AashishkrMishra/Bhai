@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import CandidateCard from "@/components/CandidateCard";
 import { useCandidates } from "@/hooks/useCandidates";
-import { Candidate, CandidateStage } from "@/mock/db";
+import { Candidate, CandidateStage } from "@/mock/type";
 import { Plus } from "lucide-react";
 
 // This component receives the filtered candidates as a prop
