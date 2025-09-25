@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { db, Note } from "@/mock/db";
+import { db } from "@/mock/db";
+import {Note} from "@/mock/type";
 import { Trash2, ChevronDown } from "lucide-react"; // Import icons
 import { motion, AnimatePresence } from "framer-motion"; // Import for animation
 

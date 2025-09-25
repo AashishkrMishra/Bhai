@@ -1,20 +1,11 @@
 // handlers.ts
 import { http, HttpResponse, delay } from "msw";
-import { db, Job, Candidate, Assessment } from "./db";
-
-// ------------------ Utils ------------------
-function randomDelay() {
-  return delay(200 + Math.random() * 1000); // 200–1200ms
-}
-function maybeError() {
-  if (Math.random() < 0.1) {
-    throw HttpResponse.json({ error: "Random server error" }, { status: 500 });
-  }
-}
+import { Job, Candidate, Assessment, UserResponse } from "./type";
+import { db } from "@/mock/db"; // Dexie instance
+import { randomDelay, maybeError } from "@/lib/utils";
 
 // ------------------ Handlers ------------------
 export const handlers = [
-  // ---- Jobs ----
   http.get("/jobs", async ({ request }) => {
     await randomDelay();
     const url = new URL(request.url);
@@ -132,6 +123,32 @@ export const handlers = [
     return HttpResponse.json(moving);
   }),
 
+  http.get("/jobs/:jobId/candidates", async ({ params }) => {
+    const jobId = Number(params.jobId);
+    if (isNaN(jobId)) {
+      return HttpResponse.json({ error: "Invalid jobId" }, { status: 400 });
+    }
+
+    const candidates = await db.candidates
+      .where("jobId")
+      .equals(jobId)
+      .toArray();
+    return HttpResponse.json({ jobId, candidates });
+  }),
+
+  http.get("/jobs/:jobId/assignments", async ({ params }) => {
+    const jobId = Number(params.jobId);
+    if (isNaN(jobId)) {
+      return HttpResponse.json({ error: "Invalid jobId" }, { status: 400 });
+    }
+
+    const assignments = await db.assessments
+      .where("jobId")
+      .equals(jobId)
+      .toArray();
+    return HttpResponse.json({ jobId, assignments });
+  }),
+
   // ---- Candidates ----
   http.get("/candidates", async ({ request }) => {
     await randomDelay();
@@ -183,59 +200,136 @@ export const handlers = [
     return HttpResponse.json(timeline);
   }),
 
-  // ---- Assessments ----
+  // GET all assessments (optionally filter by jobId)
   http.get("/assessments", async ({ request }) => {
-  await randomDelay();
-  const url = new URL(request.url);
-  const jobId = url.searchParams.get("jobId");
-
-  let assessments = await db.assessments.toArray();
-  const jobs = await db.jobs.toArray();
-
-  if (jobId) {
-    assessments = assessments.filter((a) => a.jobId === Number(jobId));
-  }
-
-  // attach job title
-  const data = assessments.map((a) => {
-    const job = jobs.find((j) => j.id === a.jobId);
-    return {
-      ...a,
-      jobTitle: job ? job.title : "Unknown Job",
-    };
-  });
-
-  return HttpResponse.json({ data, total: data.length });
-}),
-
-
-  http.get("/assessments/:jobId", async ({ params }) => {
     await randomDelay();
-    const jobId = Number(params.jobId);
-    const assessment = await db.assessments.get(jobId);
+    const url = new URL(request.url);
+    const jobId = url.searchParams.get("jobId");
+
+    let assessments = await db.assessments.toArray();
+    const jobs = await db.jobs.toArray();
+
+    if (jobId) {
+      assessments = assessments.filter((a) => a.jobId === Number(jobId));
+    }
+
+    const data = assessments.map((a) => {
+      const job = jobs.find((j) => j.id === a.jobId);
+
+      const sectionCount = a.sections?.length || 0;
+      const totalQuestions =
+        a.sections?.reduce((sum, s) => sum + (s.questions?.length || 0), 0) ||
+        0;
+
+      return {
+        ...a,
+        jobTitle: job ? job.title : "Unknown Job",
+        sectionCount,
+        totalQuestions,
+        submissions: a.submissions ?? 0,
+        duration: a.duration || `${totalQuestions * 2} mins`, // fallback
+      };
+    });
+
+    return HttpResponse.json({ data });
+  }),
+
+  // GET a single assessment by id
+  http.get("/assessments/:id", async ({ params }) => {
+    await randomDelay();
+    const id = Number(params.id);
+    const assessment = await db.assessments.get(id);
+    if (!assessment) {
+      return HttpResponse.json({ error: "Not found" }, { status: 404 });
+    }
     return HttpResponse.json(assessment);
   }),
 
-  http.put("/assessments/:jobId", async ({ params, request }) => {
+  // CREATE new assessment
+  http.post("/assessments", async ({ request }) => {
     await randomDelay();
     maybeError();
-    const jobId = Number(params.jobId);
     const body = (await request.json()) as Assessment;
-    await db.assessments.put({ ...body, jobId });
+    const id = await db.assessments.add(body);
+    return HttpResponse.json({ ...body, id });
+  }),
+
+ http.post("/assessments/:jobId", async ({ request, params }) => {
+  const body = (await request.json()) as Assessment;
+  const jobId = Number(params.jobId);
+
+  // 🔍 Lookup job from DB
+  const job = await db.jobs.get(jobId);
+  if (!job) {
+    return HttpResponse.json(
+      { error: `Job with id ${jobId} not found` },
+      { status: 404 }
+    );
+  }
+
+  const newAssessment = {
+    ...body,
+    jobId,
+    role: job.title, // ✅ store job role/title
+   };
+  const id = await db.assessments.add(newAssessment); // Dexie assigns id
+  return HttpResponse.json({ ...newAssessment, id });
+}),
+  // UPDATE assessment
+  http.put("/assessments/:id", async ({ params, request }) => {
+    await randomDelay();
+    maybeError();
+    const id = Number(params.id);
+    const body = (await request.json()) as Assessment;
+    await db.assessments.put({ ...body, id });
     return HttpResponse.json(body);
   }),
 
-  http.post("/assessments/:jobId/submit", async ({ params, request }) => {
+  // DELETE assessment
+  http.delete("/assessments/:id", async ({ params }) => {
+    await randomDelay();
+    const id = Number(params.id);
+    await db.assessments.delete(id);
+    return HttpResponse.json({ success: true });
+  }),
+
+  // SUBMIT response to an assessment
+  http.post("/assessments/:id/submit", async ({ params, request }) => {
     await randomDelay();
     maybeError();
-    const jobId = Number(params.jobId);
-    const body = (await request.json()) as Record<string, string>;
-    const assessment = await db.assessments.get(jobId);
-    if (!assessment)
-      return HttpResponse.json({ error: "Not found" }, { status: 404 });
+    const assessmentId = Number(params.id);
+    const body = (await request.json()) as Record<
+      number,
+      string | number | string[]
+    >;
+    // body = { questionId: answer }
 
-    assessment.responses = body;
-    await db.assessments.put(assessment);
-    return HttpResponse.json({ success: true });
+    const assessment = await db.assessments.get(assessmentId);
+    if (!assessment) {
+      return HttpResponse.json(
+        { error: "Assessment not found" },
+        { status: 404 }
+      );
+    }
+
+    const createdAt = new Date().toISOString();
+
+    // convert answers into UserResponse records
+    const responses = Object.entries(body).map(([qid, answer]) => ({
+      id: Date.now() + Math.floor(Math.random() * 10000), // quick unique ID
+      assessmentId,
+      questionId: Number(qid),
+      answer,
+      createdAt,
+    })) as UserResponse[];
+
+    await db.responses.bulkAdd(responses);
+
+    // bump submissions count on the assessment
+    await db.assessments.update(assessmentId, {
+      submissions: (assessment.submissions ?? 0) + 1,
+    });
+
+    return HttpResponse.json({ success: true, responses });
   }),
 ];

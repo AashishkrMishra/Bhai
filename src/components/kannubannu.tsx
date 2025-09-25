@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import StageColumn from "@/components/StageColumn"; 
-import { Candidate, CandidateStage } from "@/mock/db";
+import { Candidate, CandidateStage } from "@/mock/type";
 import { useCandidates } from "@/hooks/useCandidates";
 
 // This component receives filtered candidates from its parent page

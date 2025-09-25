@@ -1,5 +1,5 @@
 import { Card } from "@/components/ui/card";
-import { Candidate } from "../mock/db";
+import { Candidate } from "../mock/type";
 import { MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 

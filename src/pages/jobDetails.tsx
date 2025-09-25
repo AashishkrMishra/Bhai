@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Edit, Archive, Trash2, FileText, ListChecks, Tags, Users, Briefcase, Calendar, Eye, ClipboardCheck, DollarSign, UserCheck, Building } from 'lucide-react';
-import { db, Job, Candidate, CandidateStage } from "@/mock/db";
+import {  Job, Candidate, CandidateStage } from "@/mock/type";
+import { db } from '@/mock/db';
 import Layout from "@/components/layout";
 import NewJobModal from "@/components/JobModal";
 
@@ -185,12 +186,19 @@ export default function JobDetails() {
                         
                         <ContentSection icon={Eye} title="Quick Actions" style={{ animationDelay: '700ms' }}>
                             <div className="flex flex-col gap-3">
-                                <button className="quick-action-btn primary">
-                                    <Eye className="w-4 h-4 mr-2"/> View Candidates
-                                </button>
-                                <button className="quick-action-btn secondary">
-                                    <ClipboardCheck className="w-4 h-4 mr-2"/> View Assessments
-                                </button>
+                                <button
+                className="quick-action-button primary"
+                onClick={() => navigate(`/jobs/${job.id}/candidates`)}
+              >
+                👥 View Candidates
+              </button>
+
+              <button
+                className="quick-action-button secondary"
+                onClick={() => navigate(`/jobs/${job.id}/assessments`)}
+              >
+                📑 View Assessments
+              </button>
                             </div>
                         </ContentSection>
                     </div>

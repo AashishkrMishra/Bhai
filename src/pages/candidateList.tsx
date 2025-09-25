@@ -3,7 +3,8 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { db, Candidate, CandidateStage } from "@/mock/db";
+import {  Candidate, CandidateStage } from "@/mock/type";
+import { db } from "@/mock/db";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";

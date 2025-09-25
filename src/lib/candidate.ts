@@ -1,4 +1,4 @@
-import { Candidate, CandidateStage } from "@/mock/db";
+import { Candidate, CandidateStage } from "@/mock/type";
 
 export const candidateService = {
   async getCandidates(): Promise<Candidate[]> {

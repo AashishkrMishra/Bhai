@@ -1,6 +1,6 @@
 "use client";
 
-import { TimelineEvent } from "@/mock/db";
+import { TimelineEvent } from "@/mock/type";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
