@@ -1,417 +1,194 @@
-import React, { useState, useEffect } from 'react';
-import { Users, Mail, Phone, Calendar, Search, Filter } from 'lucide-react';
+import { useEffect, useState } from "react";
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
+import { arrayMove, SortableContext, verticalListSortingStrategy, useSortable, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { CandidateStage } from "@/mock/db";
 
-// Types
-interface Candidate {
-  id?: number;
-  jobId: number;
-  jobTitle: string;
+// Minimal Card and Column for DnD
+
+type KanbanCandidate = {
+  id: number;
   name: string;
-  email: string;
-  phone: string;
-  appliedDate: string;
+  jobTitle: string;
   stage: CandidateStage;
-}
-
-enum CandidateStage {
-  APPLIED = 'Applied',
-  PHONE_SCREEN = 'Phone Screen',
-  TECHNICAL_INTERVIEW = 'Technical Interview',
-  OFFER = 'Offer',
-  HIRED = 'Hired'
-}
-
-// Mock API service (replace with your MSW + Dexie implementation)
-const candidateService = {
-  async getCandidates(): Promise<Candidate[]> {
-    // Simulate API call
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve([
-          {
-            id: 1,
-            jobId: 1,
-            jobTitle: 'Software Engineer',
-            name: 'Hunter Green',
-            email: 'hunter.green.253@example.com',
-            phone: '+1-594-918-2888',
-            appliedDate: 'Jul 29',
-            stage: CandidateStage.APPLIED
-          },
-          {
-            id: 2,
-            jobId: 1,
-            jobTitle: 'Software Engineer',
-            name: 'Hayden Wilson',
-            email: 'hayden.wilson.35@example.com',
-            phone: '+1-594-918-2888',
-            appliedDate: 'Jul 27',
-            stage: CandidateStage.APPLIED
-          },
-          {
-            id: 3,
-            jobId: 2,
-            jobTitle: 'Frontend Developer',
-            name: 'Nico Garcia',
-            email: 'nico.garcia.24@example.com',
-            phone: '+1-235-261-2259',
-            appliedDate: 'Aug 20',
-            stage: CandidateStage.PHONE_SCREEN
-          },
-          {
-            id: 4,
-            jobId: 2,
-            jobTitle: 'Frontend Developer',
-            name: 'Charlie Campbell',
-            email: 'charlie.campbell.118@example.com',
-            phone: '+1-594-918-2888',
-            appliedDate: 'Aug 17',
-            stage: CandidateStage.PHONE_SCREEN
-          },
-          {
-            id: 5,
-            jobId: 3,
-            jobTitle: 'Backend Developer',
-            name: 'Avery Gomez',
-            email: 'avery.gomez.575@example.com',
-            phone: '+1-650-541-5746',
-            appliedDate: 'Sep 11',
-            stage: CandidateStage.TECHNICAL_INTERVIEW
-          },
-          {
-            id: 6,
-            jobId: 3,
-            jobTitle: 'Backend Developer',
-            name: 'Skyler Ramirez',
-            email: 'skyler.ramirez.18@example.com',
-            phone: '+1-922-444-3105',
-            appliedDate: 'Aug 27',
-            stage: CandidateStage.TECHNICAL_INTERVIEW
-          },
-          {
-            id: 7,
-            jobId: 4,
-            jobTitle: 'DevOps Engineer',
-            name: 'Devon Jackson',
-            email: 'devon.jackson.135@example.com',
-            phone: '+1-366-378-1815',
-            appliedDate: 'Sep 6',
-            stage: CandidateStage.OFFER
-          },
-          {
-            id: 8,
-            jobId: 4,
-            jobTitle: 'DevOps Engineer',
-            name: 'Casey Rivera',
-            email: 'casey.rivera.317@example.com',
-            phone: '+1-900-926-4685',
-            appliedDate: 'Jul 27',
-            stage: CandidateStage.OFFER
-          },
-          {
-            id: 9,
-            jobId: 5,
-            jobTitle: 'Data Scientist',
-            name: 'Lennox Hall',
-            email: 'lennox.hall.171@example.com',
-            phone: '+1-366-378-1815',
-            appliedDate: 'Aug 20',
-            stage: CandidateStage.HIRED
-          },
-          {
-            id: 10,
-            jobId: 5,
-            jobTitle: 'Data Scientist',
-            name: 'Kris Hernandez',
-            email: 'kris.hernandez.512@example.com',
-            phone: '+1-640-965-5919',
-            appliedDate: 'Aug 17',
-            stage: CandidateStage.HIRED
-          }
-        ]);
-      }, 500);
-    });
-  },
-
-  async updateCandidateStage(candidateId: number, newStage: CandidateStage): Promise<void> {
-    // Simulate API call to update candidate stage
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        console.log(`Updated candidate ${candidateId} to stage: ${newStage}`);
-        resolve();
-      }, 200);
-    });
-  }
+  order?: number;
+  [key: string]: any;
 };
 
-// Candidate Card Component
-const CandidateCard: React.FC<{
-  candidate: Candidate;
-  onDragStart: (e: React.DragEvent, candidate: Candidate) => void;
-}> = ({ candidate, onDragStart }) => {
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
-  };
+function KanbanCard({ candidate }: { candidate: KanbanCandidate }) {
+  return (
+    <div className="bg-white rounded-lg shadow p-4 mb-3 border cursor-grab transition">
+      <div className="font-semibold text-slate-800">{candidate.name}</div>
+      <div className="text-xs text-slate-500">{candidate.jobTitle}</div>
+    </div>
+  );
+}
 
-  const getInitialsColor = (name: string) => {
-    const colors = [
-      'bg-blue-600', 'bg-purple-600', 'bg-green-600', 
-      'bg-orange-600', 'bg-pink-600', 'bg-indigo-600'
-    ];
-    const hash = name.split('').reduce((a, b) => {
-      a = ((a << 5) - a) + b.charCodeAt(0);
-      return a & a;
-    }, 0);
-    return colors[Math.abs(hash) % colors.length];
+function SortableKanbanCard({ candidate }: { candidate: KanbanCandidate }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: candidate.id });
+  const style = {
+    ...(transform ? { transform: CSS.Transform.toString(transform) } : {}),
+    ...(transition ? { transition } : {}),
   };
-
   return (
     <div
-      className="bg-slate-800 rounded-lg p-4 mb-3 cursor-move hover:bg-slate-750 transition-colors border border-slate-700"
-      draggable
-      onDragStart={(e) => onDragStart(e, candidate)}
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={`bg-white rounded-lg shadow p-4 mb-3 border cursor-grab transition ${isDragging ? "opacity-60" : ""}`}
     >
-      <div className="flex items-start gap-3">
-        <div className={`w-10 h-10 rounded-full ${getInitialsColor(candidate.name)} flex items-center justify-center text-white text-sm font-medium`}>
-          {getInitials(candidate.name)}
-        </div>
-        <div className="flex-1 min-w-0">
-          <h3 className="text-white font-medium text-sm mb-2 truncate">
-            {candidate.name}
-          </h3>
-          
-          <div className="space-y-2 text-xs">
-            <div className="flex items-center gap-2 text-slate-400">
-              <Mail className="w-3 h-3" />
-              <span className="truncate">{candidate.email}</span>
-            </div>
-            <div className="flex items-center gap-2 text-slate-400">
-              <Phone className="w-3 h-3" />
-              <span>{candidate.phone}</span>
-            </div>
-            <div className="flex items-center gap-2 text-slate-400">
-              <Calendar className="w-3 h-3" />
-              <span>Applied {candidate.appliedDate}</span>
-            </div>
-          </div>
-        </div>
-      </div>
+      <div className="font-semibold text-slate-800">{candidate.name}</div>
+      <div className="text-xs text-slate-500">{candidate.jobTitle}</div>
     </div>
   );
-};
+}
 
-// Stage Column Component
-const StageColumn: React.FC<{
+function KanbanColumn({
+  stage,
+  name,
+  color,
+  candidates,
+  children,
+}: {
   stage: CandidateStage;
-  candidates: Candidate[];
-  count: number;
+  name: string;
   color: string;
-  onDrop: (e: React.DragEvent, targetStage: CandidateStage) => void;
-  onDragOver: (e: React.DragEvent) => void;
-  onDragStart: (e: React.DragEvent, candidate: Candidate) => void;
-}> = ({ stage, candidates, count, color, onDrop, onDragOver, onDragStart }) => {
+  candidates: KanbanCandidate[];
+  children?: React.ReactNode;
+}) {
   return (
-    <div className="flex-1 min-w-80">
-      <div className="mb-4">
-        <div className="flex items-center gap-3 mb-4">
-          <div className={`w-3 h-3 rounded-full ${color}`}></div>
-          <h2 className="text-white font-medium text-lg">{stage}</h2>
-          <span className="bg-slate-700 text-slate-300 px-2 py-1 rounded text-sm font-medium">
-            {count}
-          </span>
-        </div>
-      </div>
-      
-      <div
-        className="min-h-96 bg-slate-900/50 rounded-lg p-4 border-2 border-dashed border-slate-700 hover:border-slate-600 transition-colors"
-        onDrop={(e) => onDrop(e, stage)}
-        onDragOver={onDragOver}
-      >
-        {candidates.map((candidate) => (
-          <CandidateCard
-            key={candidate.id}
-            candidate={candidate}
-            onDragStart={onDragStart}
-          />
-        ))}
+    <div className="flex-1 min-w-64">
+      <div className={`rounded-t-lg px-4 py-2 font-bold text-white ${color}`}>{name} <span className="ml-2 text-xs">/ {candidates.length}</span></div>
+      <div className="bg-slate-100 rounded-b-lg p-3 min-h-40">
+        {children}
       </div>
     </div>
   );
-};
+}
 
-// Main Kanban Board Component
-const CandidatesKanban: React.FC = () => {
-  const [candidates, setCandidates] = useState<Candidate[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedJob, setSelectedJob] = useState('All Jobs');
-  const [selectedStage, setSelectedStage] = useState('All');
-  const [draggedCandidate, setDraggedCandidate] = useState<Candidate | null>(null);
+// API helpers for backend
+async function fetchCandidates(): Promise<KanbanCandidate[]> {
+  const res = await fetch('/candidates');
+  if (!res.ok) throw new Error('Failed to fetch candidates');
+  const data = await res.json();
+  return data.data;
+}
 
-  useEffect(() => {
-    loadCandidates();
-  }, []);
+async function patchCandidateStage(id: number, stage: CandidateStage) {
+  await fetch(`/candidates/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ stage })
+  });
+}
 
-  const loadCandidates = async () => {
+export default function KannuBannu({ candidates: initialCandidates }: { candidates: any[] }) {
+  const [candidates, setCandidates] = useState<KanbanCandidate[]>(initialCandidates);
+  const [loading, setLoading] = useState(false);
+  const [activeId, setActiveId] = useState<number | null>(null);
+
+  // Always fetch from backend on mount
+  async function loadCandidates() {
+    setLoading(true);
     try {
-      setLoading(true);
-      const data = await candidateService.getCandidates();
+      const data = await fetchCandidates();
       setCandidates(data);
-    } catch (error) {
-      console.error('Failed to load candidates:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const handleDragStart = (e: React.DragEvent, candidate: Candidate) => {
-    setDraggedCandidate(candidate);
-    e.dataTransfer.effectAllowed = 'move';
-  };
+  useEffect(() => {
+    loadCandidates();
+    // eslint-disable-next-line
+  }, []);
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
+  const sensors = useSensors(useSensor(PointerSensor));
 
-  const handleDrop = async (e: React.DragEvent, targetStage: CandidateStage) => {
-    e.preventDefault();
-    
-    if (!draggedCandidate || draggedCandidate.stage === targetStage) {
-      setDraggedCandidate(null);
-      return;
-    }
-
-    try {
-      // Update candidate stage in backend
-      await candidateService.updateCandidateStage(draggedCandidate.id!, targetStage);
-      
-      // Update local state
-      setCandidates(prev => 
-        prev.map(candidate => 
-          candidate.id === draggedCandidate.id 
-            ? { ...candidate, stage: targetStage }
-            : candidate
-        )
-      );
-    } catch (error) {
-      console.error('Failed to update candidate stage:', error);
-    }
-    
-    setDraggedCandidate(null);
-  };
-
-  const filteredCandidates = candidates.filter(candidate => {
-    const matchesSearch = candidate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         candidate.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesJob = selectedJob === 'All Jobs' || candidate.jobTitle === selectedJob;
-    const matchesStage = selectedStage === 'All' || candidate.stage === selectedStage;
-    
-    return matchesSearch && matchesJob && matchesStage;
-  });
-
-  const getCandidatesByStage = (stage: CandidateStage) => {
-    return filteredCandidates.filter(candidate => candidate.stage === stage);
-  };
-
-  const getStageCount = (stage: CandidateStage) => {
-    return getCandidatesByStage(stage).length;
-  };
-
-  const stages = [
-    { stage: CandidateStage.APPLIED, color: 'bg-blue-500', count: getStageCount(CandidateStage.APPLIED) },
-    { stage: CandidateStage.PHONE_SCREEN, color: 'bg-orange-500', count: getStageCount(CandidateStage.PHONE_SCREEN) },
-    { stage: CandidateStage.TECHNICAL_INTERVIEW, color: 'bg-purple-500', count: getStageCount(CandidateStage.TECHNICAL_INTERVIEW) },
-    { stage: CandidateStage.OFFER, color: 'bg-teal-500', count: getStageCount(CandidateStage.OFFER) },
-    { stage: CandidateStage.HIRED, color: 'bg-green-500', count: getStageCount(CandidateStage.HIRED) }
+  const stages: { stage: CandidateStage; color: string; name: string }[] = [
+    { stage: "applied", color: "bg-slate-400", name: "Applied" },
+    { stage: "screen", color: "bg-orange-400", name: "Screen" },
+    { stage: "tech", color: "bg-purple-400", name: "Tech Interview" },
+    { stage: "offer", color: "bg-sky-400", name: "Offer" },
+    { stage: "hired", color: "bg-green-400", name: "Hired" },
+    { stage: "rejected", color: "bg-red-400", name: "Rejected" },
   ];
 
-  const uniqueJobTitles = [...new Set(candidates.map(c => c.jobTitle))];
+  // Group candidates by stage, and sort by order if available
+  const stageMap: Record<string, KanbanCandidate[]> = {};
+  stages.forEach(({ stage }) => {
+    stageMap[stage] = candidates
+      .filter((c) => c.stage === stage)
+      .sort((a, b) => ((a.order ?? 0) - (b.order ?? 0)));
+  });
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="text-white text-lg">Loading candidates...</div>
-      </div>
-    );
+  // DnD Handlers
+  function handleDragStart(event: any) {
+    setActiveId(Number(event.active.id));
+  }
+
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || !active) {
+      setActiveId(null);
+      return;
+    }
+    const fromId = Number(active.id);
+    const toId = over.id;
+    // Find the candidate being dragged
+    const candidate = candidates.find((c) => c.id === fromId);
+    if (!candidate) {
+      setActiveId(null);
+      return;
+    }
+    // Find the stage (column) where the card was dropped
+    let toStage: CandidateStage | null = null;
+    for (const { stage } of stages) {
+      if (stageMap[stage].some((c) => String(c.id) === String(toId))) {
+        toStage = stage;
+        break;
+      }
+    }
+    // If dropped on empty column, fallback to column id
+    if (!toStage && stages.some(s => s.stage === toId)) {
+      toStage = toId as CandidateStage;
+    }
+    if (!toStage) {
+      setActiveId(null);
+      return;
+    }
+    // Only update if stage actually changed
+    if (candidate.stage !== toStage) {
+      await patchCandidateStage(candidate.id, toStage);
+      await loadCandidates();
+    }
+    setActiveId(null);
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white">
-      <div className="p-6">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="bg-blue-600 p-2 rounded-lg">
-              <Users className="w-6 h-6" />
-            </div>
-            <h1 className="text-2xl font-bold">Candidates</h1>
-          </div>
-
-          {/* Filters */}
-          <div className="flex gap-4 mb-6">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-              <input
-                type="text"
-                placeholder="Search candidates..."
-                className="bg-slate-800 border border-slate-700 rounded-lg pl-10 pr-4 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-blue-500"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            
-            <select
-              className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
-              value={selectedStage}
-              onChange={(e) => setSelectedStage(e.target.value)}
-            >
-              <option value="All">Stage: All</option>
-              {Object.values(CandidateStage).map(stage => (
-                <option key={stage} value={stage}>Stage: {stage}</option>
-              ))}
-            </select>
-
-            <select
-              className="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
-              value={selectedJob}
-              onChange={(e) => setSelectedJob(e.target.value)}
-            >
-              <option value="All Jobs">Job: All Jobs</option>
-              {uniqueJobTitles.map(job => (
-                <option key={job} value={job}>Job: {job}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Pipeline Info */}
-          <div className="bg-slate-800/50 rounded-lg p-4">
-            <div className="flex items-center gap-3">
-              <Users className="w-5 h-5 text-blue-400" />
-              <h2 className="text-lg font-semibold">Hiring Pipeline</h2>
-            </div>
-            <p className="text-slate-400 mt-1">Drag candidates between stages to update their status</p>
-          </div>
-        </div>
-
-        {/* Kanban Board */}
-        <div className="flex gap-6 overflow-x-auto pb-6">
-          {stages.map(({ stage, color, count }) => (
-            <StageColumn
-              key={stage}
-              stage={stage}
-              candidates={getCandidatesByStage(stage)}
-              count={count}
-              color={color}
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-              onDragStart={handleDragStart}
-            />
-          ))}
-        </div>
+    <div className="min-h-full">
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-2xl font-bold text-slate-800">Kanban View</h1>
       </div>
+      {loading ? (
+        <div className="flex justify-center items-center h-96 text-slate-500">Loading candidates...</div>
+      ) : (
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+          <div className="flex gap-6 overflow-x-auto py-6">
+            {stages.map(({ stage, color, name }) => (
+              <KanbanColumn key={stage} stage={stage} name={name} color={color} candidates={stageMap[stage]}>
+                <SortableContext items={stageMap[stage].map((c) => c.id!)} strategy={verticalListSortingStrategy}>
+                  {stageMap[stage].map((candidate) => (
+                    <SortableKanbanCard key={candidate.id} candidate={candidate} />
+                  ))}
+                </SortableContext>
+              </KanbanColumn>
+            ))}
+          </div>
+        </DndContext>
+      )}
     </div>
   );
-};
+}
 
-export default CandidatesKanban;
