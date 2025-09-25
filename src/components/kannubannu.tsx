@@ -1,16 +1,8 @@
-<<<<<<< HEAD
-import { useState } from "react";
-import { motion } from "framer-motion";
-import StageColumn from "@/components/StageColumn"; 
-import { Candidate, CandidateStage } from "@/mock/type";
-import { useCandidates } from "@/hooks/useCandidates";
-=======
 import { useEffect, useState } from "react";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, verticalListSortingStrategy, useSortable, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { CandidateStage } from "@/mock/db";
->>>>>>> f96843f075fec3e0b980687e121da404ac7137e0
+import { CandidateStage } from "@/mock/type";
 
 // Minimal Card and Column for DnD
 
