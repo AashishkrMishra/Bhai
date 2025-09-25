@@ -33,108 +33,83 @@ function SortableJobCard({ job, id }: { job: Job; id: number | string }) {
     zIndex: isDragging ? 999 : "auto",
   };
   const navigate = useNavigate();
-  // Single click anywhere on the card (except drag handle or More button) navigates to job details
-  const handleCardClick = (e: React.MouseEvent) => {
-    // Prevent navigation if clicking on drag handle or More button
-    const target = e.target as HTMLElement;
-    if (
-      target.closest('.drag-handle') ||
-      target.closest('.more-btn')
-    ) {
-      return;
-    }
-    if (job.id && typeof job.id === 'number') {
-      navigate(`/jobs/${job.id}`);
-    }
-  };
-
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      className="h-full min-h-[340px]"
-      onClick={handleCardClick}
-      role="button"
-      tabIndex={0}
-      onKeyDown={e => {
-        if (e.key === 'Enter' || e.key === ' ') handleCardClick(e as any);
-      }}
-    >
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="h-full min-h-[340px]">
       <Card className="bg-white border border-slate-200 text-slate-800 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer rounded-xl flex flex-col h-full group relative">
         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
-          <div className="bg-slate-100 hover:bg-slate-200 rounded p-1 cursor-grab active:cursor-grabbing drag-handle">
+          <div className="bg-slate-100 hover:bg-slate-200 rounded p-1 cursor-grab active:cursor-grabbing">
             <GripVertical className="h-4 w-4 text-slate-400" />
           </div>
         </div>
-        <CardHeader className="space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-10 rounded-xl bg-slate-100 flex items-center justify-center">
-                {job.companyIcon}
-              </div>
-              <CardTitle className="text-lg font-bold text-slate-900">{job.title}</CardTitle>
-            </div>
-            <div className="flex items-center gap-1">
-              {job.status === 'active' ? (
-                <Badge className="bg-green-100 text-green-700 hover:bg-green-100/80 border border-green-200/80 gap-1.5">
-                  <CheckCircle2 size={14} /> Active
-                </Badge>
-              ) : (
-                <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100/80 border border-amber-200/80 gap-1.5">
-                  <Archive size={14} /> Archived
-                </Badge>
-              )}
-              <Button variant="ghost" size="icon" className="h-8 w-8 more-btn" onClick={e => {e.stopPropagation();}}>
-                <MoreHorizontal size={16} />
-              </Button>
-            </div>
-          </div>
-          <p className="text-sm text-slate-500 pt-1">{job.description}</p>
-        </CardHeader>
-        <CardContent className="space-y-4 pt-0 flex flex-col flex-grow">
-          <div className="flex items-center flex-wrap text-sm text-slate-500 gap-x-4 gap-y-2">
-            <div className="flex items-center gap-2">
-              <MapPin size={16} /> <span>{job.location || 'Remote'}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Briefcase size={16} /> <span className="capitalize">{job.type}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Calendar size={16} />
-              <span>{job.date ? format(parseISO(job.date), 'MMM d, yyyy') : 'N/A'}</span>
-            </div>
-          </div>
-          <div className="space-y-3 pt-4 border-t border-slate-100 flex flex-col flex-grow">
-            {(job.requirements && job.requirements.length > 0) && (
-              <div className="bg-slate-50 border border-slate-200/80 rounded-lg p-3">
-                <h4 className="font-semibold text-xs text-slate-600 mb-2 flex items-center gap-2"><Star size={14}/> Key Requirements</h4>
-                <ul className="list-disc list-inside space-y-1">
-                  {job.requirements.slice(0, 2).map((req, i) => (
-                    <li key={i} className="text-xs text-slate-500">{req}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {(job.skills && job.skills.length > 0) && (
-              <div className="bg-slate-50 border border-slate-200/80 rounded-lg p-3 mt-auto">
-                <h4 className="font-semibold text-xs text-slate-600 mb-2 flex items-center gap-1"><Dot/> Skills & Technologies</h4>
-                <div className="flex flex-wrap gap-2">
-                  {job.skills.slice(0, 4).map((skill, i) => (
-                    <Badge key={i} variant="secondary" className="flex items-center gap-1.5 font-normal">
-                      <span className="h-1.5 w-1.5 rounded-full bg-slate-400"></span>
-                      {skill}
-                    </Badge>
-                  ))}
-                  {job.skills.length > 4 && (
-                    <Badge variant="secondary" className="font-normal">+{job.skills.length - 4} more</Badge>
-                  )}
+        <div onClick={() => job.id && job.id !== undefined && typeof job.id === 'number' ? navigate(`/jobs/${job.id}`) : undefined}>
+          <CardHeader className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-10 rounded-xl bg-slate-100 flex items-center justify-center">
+                  {job.companyIcon}
                 </div>
+                <CardTitle className="text-lg font-bold text-slate-900">{job.title}</CardTitle>
               </div>
-            )}
-          </div>
-        </CardContent>
+              <div className="flex items-center gap-1">
+                {job.status === 'active' ? (
+                  <Badge className="bg-green-100 text-green-700 hover:bg-green-100/80 border border-green-200/80 gap-1.5">
+                    <CheckCircle2 size={14} /> Active
+                  </Badge>
+                ) : (
+                  <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100/80 border border-amber-200/80 gap-1.5">
+                    <Archive size={14} /> Archived
+                  </Badge>
+                )}
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => {e.stopPropagation();}}>
+                  <MoreHorizontal size={16} />
+                </Button>
+              </div>
+            </div>
+            <p className="text-sm text-slate-500 pt-1">{job.description}</p>
+          </CardHeader>
+          <CardContent className="space-y-4 pt-0 flex flex-col flex-grow">
+            <div className="flex items-center flex-wrap text-sm text-slate-500 gap-x-4 gap-y-2">
+              <div className="flex items-center gap-2">
+                <MapPin size={16} /> <span>{job.location || 'Remote'}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Briefcase size={16} /> <span className="capitalize">{job.type}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Calendar size={16} />
+                <span>{job.date ? format(parseISO(job.date), 'MMM d, yyyy') : 'N/A'}</span>
+              </div>
+            </div>
+            <div className="space-y-3 pt-4 border-t border-slate-100 flex flex-col flex-grow">
+              {(job.requirements && job.requirements.length > 0) && (
+                <div className="bg-slate-50 border border-slate-200/80 rounded-lg p-3">
+                  <h4 className="font-semibold text-xs text-slate-600 mb-2 flex items-center gap-2"><Star size={14}/> Key Requirements</h4>
+                  <ul className="list-disc list-inside space-y-1">
+                    {job.requirements.slice(0, 2).map((req, i) => (
+                      <li key={i} className="text-xs text-slate-500">{req}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {(job.skills && job.skills.length > 0) && (
+                <div className="bg-slate-50 border border-slate-200/80 rounded-lg p-3 mt-auto">
+                  <h4 className="font-semibold text-xs text-slate-600 mb-2 flex items-center gap-1"><Dot/> Skills & Technologies</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {job.skills.slice(0, 4).map((skill, i) => (
+                      <Badge key={i} variant="secondary" className="flex items-center gap-1.5 font-normal">
+                        <span className="h-1.5 w-1.5 rounded-full bg-slate-400"></span>
+                        {skill}
+                      </Badge>
+                    ))}
+                    {job.skills.length > 4 && (
+                      <Badge variant="secondary" className="font-normal">+{job.skills.length - 4} more</Badge>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </div>
       </Card>
     </div>
   );
